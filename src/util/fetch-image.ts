@@ -1,4 +1,5 @@
 import { blobToBase64 } from "@/lib/utils";
+import { buildGenerationPayload } from "@/util/generation";
 
 export const fetchImage = async (
   input_image: string,
@@ -11,17 +12,7 @@ export const fetchImage = async (
       accept: "image/jpeg",
       "content-type": "application/json",
     },
-    body: JSON.stringify({
-      input_image: input_image.replace(/^data:image\/(png|jpeg);base64,/, ""),
-      prompt,
-      guidance_scale: 8,
-      lcm_steps: 50,
-      seed: 2159232,
-      steps: 4,
-      strength: 0.7,
-      width: size,
-      height: size,
-    }),
+    body: JSON.stringify(buildGenerationPayload(input_image, prompt, size)),
     method: "POST",
     signal,
   });
