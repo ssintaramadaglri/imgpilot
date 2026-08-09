@@ -1,0 +1,7 @@
+node_modules
+.next
+out
+public/excalidraw
+package-lock.json
+public/imgpilot.webm
+public/preview.mp4
