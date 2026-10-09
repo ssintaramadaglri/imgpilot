@@ -21,7 +21,10 @@ describe("sanitizePrompt", () => {
   });
 
   it("strips characters the model cannot use", () => {
-    assert.equal(sanitizePrompt("chrome #ff0000 <style>"), "chrome ff0000 style");
+    assert.equal(
+      sanitizePrompt("chrome #ff0000 <style>"),
+      "chrome ff0000 style",
+    );
   });
 
   it("collapses empty segments", () => {

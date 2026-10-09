@@ -16,7 +16,10 @@ export interface GenerationParams {
   height: number;
 }
 
-export const DEFAULT_GENERATION: Omit<GenerationParams, "input_image" | "prompt"> = {
+export const DEFAULT_GENERATION: Omit<
+  GenerationParams,
+  "input_image" | "prompt"
+> = {
   guidance_scale: 8,
   lcm_steps: 50,
   seed: 2159232,

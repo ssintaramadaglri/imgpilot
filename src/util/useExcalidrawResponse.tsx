@@ -33,7 +33,11 @@ export const useExcalidrawResponse = (
         "To continue using this service, please set it up using the open-source project.",
       action: (
         <ToastAction asChild altText="Try again">
-          <a href="https://github.com/leptonai/imgpilot" target="_blank" rel="noreferrer">
+          <a
+            href="https://github.com/leptonai/imgpilot"
+            target="_blank"
+            rel="noreferrer"
+          >
             Github
           </a>
         </ToastAction>
@@ -43,7 +47,10 @@ export const useExcalidrawResponse = (
 
   const { data, isLoading } = useSWR(
     [elements, debouncedSafePrompt, version],
-    async ([params, debouncedSafePrompt]: [readonly NonDeletedExcalidrawElement[], string]) => {
+    async ([params, debouncedSafePrompt]: [
+      readonly NonDeletedExcalidrawElement[],
+      string,
+    ]) => {
       if (!excalidrawAPI) {
         return "";
       }

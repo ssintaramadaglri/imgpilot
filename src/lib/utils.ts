@@ -48,7 +48,8 @@ export function getRandomDifferent<T>(arr: T[], lastItem: T | null): T {
     return arr[0];
   }
 
-  const pool = lastItem === null ? arr : arr.filter((item) => item !== lastItem);
+  const pool =
+    lastItem === null ? arr : arr.filter((item) => item !== lastItem);
   if (pool.length === 0) {
     return arr[0];
   }
