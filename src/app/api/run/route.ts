@@ -39,8 +39,33 @@ export async function POST(req: NextRequest) {
   }
 
   const declared = Number(req.headers.get("content-length") ?? "0");
-  if (declared > MAX_BODY_BYTES) {
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
     return new Response("Payload too large", { status: 413 });
+  }
+
+  const contentType = req.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    return new Response("Expected application/json", {
+      status: 415,
+    });
+  }
+
+  // Reject malformed bodies here instead of letting the backend fail on them.
+  const raw = await req.text();
+  if (raw.length === 0) {
+    return new Response("Empty request body", { status: 400 });
+  }
+  if (raw.length > MAX_BODY_BYTES) {
+    return new Response("Payload too large", { status: 413 });
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return new Response("Body is not valid JSON", { status: 400 });
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return new Response("Body must be a JSON object", { status: 400 });
   }
 
   const headers = new Headers();
@@ -54,7 +79,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const upstream = await fetch(url.toString(), {
-      body: req.body,
+      body: raw,
       method: req.method,
       headers,
       duplex: "half",
