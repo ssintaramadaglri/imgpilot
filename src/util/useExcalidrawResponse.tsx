@@ -2,12 +2,17 @@ import { ToastAction } from "@/components/ui/toast";
 import { useToast } from "@/components/ui/use-toast";
 import { getBase64 } from "@/util/excalidraw";
 import { fetchImage } from "@/util/fetch-image";
+import { InvalidGenerationParams } from "@/util/generation";
+import { sanitizePrompt } from "@/util/prompt";
 import { NonDeletedExcalidrawElement } from "@excalidraw/excalidraw/types/element/types";
 import { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types/types";
-import { cuss } from "cuss";
 import { useCallback, useRef } from "react";
 import useSWR from "swr";
 import { useDebounce } from "use-debounce";
+
+const isAbort = (e: unknown) =>
+  (e instanceof DOMException && e.name === "AbortError") ||
+  (e instanceof Error && e.name === "AbortError");
 
 export const useExcalidrawResponse = (
   excalidrawAPI: ExcalidrawImperativeAPI | null,
@@ -15,11 +20,10 @@ export const useExcalidrawResponse = (
   prompt: string,
   version: string,
 ) => {
-  const words = prompt.split(" ");
-  const filteredWords = words.filter((word) => !(word.toLowerCase() in cuss));
-  const safePrompt = filteredWords.join(" ").replace(/[^a-zA-Z,.!? ]/g, "");
+  const safePrompt = sanitizePrompt(prompt);
   const errorCountRef = useRef(0);
   const abortController = useRef<AbortController | null>(null);
+  const requestIdRef = useRef(0);
   const { toast } = useToast();
 
   const [debouncedSafePrompt] = useDebounce(safePrompt, 600);
@@ -30,43 +34,54 @@ export const useExcalidrawResponse = (
         "To continue using this service, please set it up using the open-source project.",
       action: (
         <ToastAction asChild altText="Try again">
-          <a href="https://github.com/leptonai/imgpilot" target="_blank">
+          <a href="https://github.com/leptonai/imgpilot" target="_blank" rel="noreferrer">
             Github
           </a>
         </ToastAction>
       ),
     });
   }, [toast]);
+
   const { data, isLoading } = useSWR(
     [elements, debouncedSafePrompt, version],
-    async ([params, debouncedSafePrompt]) => {
-      if (excalidrawAPI) {
-        if (abortController.current) {
-          // abortController.current.abort();
-        }
-        abortController.current = new AbortController();
-        try {
-          const size = 512;
-          const input_image = await getBase64(params, excalidrawAPI, size);
-          return await fetchImage(
-            input_image,
-            debouncedSafePrompt,
-            size,
-            abortController.current.signal,
-          );
-        } catch (e) {
-          if (e instanceof Error && e.name === "AbortError") {
-            return;
-          }
-          errorCountRef.current += 1;
-          if (errorCountRef.current > 1) {
-            popupToast();
-            errorCountRef.current = 0;
-          }
+    async ([params, debouncedSafePrompt]: [readonly NonDeletedExcalidrawElement[], string]) => {
+      if (!excalidrawAPI) {
+        return "";
+      }
 
+      abortController.current?.abort();
+      const controller = new AbortController();
+      abortController.current = controller;
+      const requestId = ++requestIdRef.current;
+
+      try {
+        const size = 512;
+        const input_image = await getBase64(params, excalidrawAPI, size);
+        const image = await fetchImage(
+          input_image,
+          debouncedSafePrompt,
+          size,
+          controller.signal,
+        );
+        return requestId === requestIdRef.current ? image : "";
+      } catch (e) {
+        if (isAbort(e)) {
           return "";
         }
-      } else {
+        // Bad input is the user's, not the service's: say why instead of
+        // counting it towards the "service is down" threshold.
+        if (e instanceof InvalidGenerationParams) {
+          toast({
+            title: "Cannot generate",
+            description: e.message,
+          });
+          return "";
+        }
+        errorCountRef.current += 1;
+        if (errorCountRef.current > 1) {
+          popupToast();
+          errorCountRef.current = 0;
+        }
         return "";
       }
     },
@@ -77,5 +92,6 @@ export const useExcalidrawResponse = (
       refreshInterval: 0,
     },
   );
+
   return { base64: data as string, loading: isLoading };
 };
