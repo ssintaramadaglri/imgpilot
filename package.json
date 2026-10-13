@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "cp -R node_modules/@excalidraw/excalidraw public && next dev",
-    "build": "cp -R node_modules/@excalidraw/excalidraw public && next build",
+    "dev": "node scripts/copy-excalidraw.mjs && next dev",
+    "build": "node scripts/copy-excalidraw.mjs && next build",
     "start": "next start",
     "lint": "next lint"
   },
